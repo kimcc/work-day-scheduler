@@ -1,3 +1,9 @@
+let tasks = [];
+
+const loadTasks = function() {
+
+}
+
 // Replace p with textarea when clicked
 $('.description').on('click', 'p', function() {
     const text = $(this)
@@ -33,8 +39,6 @@ const auditRow = function(element) {
         h: rowTime,
         s: 0
     });
-
-    console.log(time);
     
     if (currentHour.isAfter(time)) {
         $('.description').addClass('past');
@@ -45,4 +49,44 @@ const auditRow = function(element) {
     }
 }
 
-auditRow($('.hour'));
+const buttonHandler = function(event) {
+    // Time and description of clicked row
+    const time = $(this).parent().siblings('.hour').find('p').text();
+    const description = $(this).parent().siblings('.description').find('p').text();
+
+    const taskObject = {
+        time: time,
+        description: description
+    };
+
+    createTask(taskObject);
+}
+
+const createTask = function(taskObject) {
+    tasks.push(taskObject);
+    saveTasks();
+}
+
+var saveTasks = function() {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+    console.log(tasks);
+};
+
+// Check the hours
+setInterval(function() {
+    $('.container .hour').each(function(index, element) {
+        auditRow(element);
+        console.log(element);
+    });
+}, (1000*60)*15);
+
+// Check the rows on document load
+$(document).ready(function(){
+    $('.container .hour').each(function(index, element) {
+        auditRow(element);
+        console.log(element);
+    });
+});
+
+$('.saveBtn').click(buttonHandler);
+
