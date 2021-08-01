@@ -1,7 +1,29 @@
 let tasks = [];
 
-const loadTasks = function() {
+// Create the starter schedule
+const createSchedule = function() {
+    $('.row').each(function() {
+        const rowTime = parseInt($(this).attr('data-time'));
 
+        const taskObject = {
+            time: rowTime,
+            description: ''
+        };
+        tasks.push(taskObject);
+    });
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+// Load in the tasks from localStorage
+const loadTasks = function() {
+    tasks = JSON.parse(localStorage.getItem("tasks"));
+
+    $(tasks).each(function(index, element) {
+        const taskHour = tasks[index].time;
+        const taskDescription = tasks[index].description;
+
+       $('[data-time=' + taskHour + ']').children('.description').find('p').text(taskDescription);
+    });
 }
 
 // Replace p with textarea when clicked
@@ -27,65 +49,81 @@ $('.description').on('blur', 'textarea', function() {
     $(this).replaceWith(descriptionP);
 });
 
-const auditRow = function(element) {
-    const rowTime = parseInt($(element).find("p").text());
+// Check the times for the rows and attach color classes
+const auditRow = function() {
 
-    const currentHour = moment({
-        h: moment().hour(),
-        s: 0
-    });
+    const currentHour = moment().hour();
 
-    const time = moment({
-        h: rowTime,
-        s: 0
+    $('.row').each(function() {
+        const hourText = $(this).children('.hour').find('p').text();
+
+        let rowTime = parseInt(hourText);
+
+        // Add 12 for PM times, except for 12PM
+        if (hourText !== '12PM' && hourText.includes('PM')) {
+            rowTime += 12;
+        }
+
+        // Add or remove the classes based on if the current hour is before, after or the same
+        if (currentHour < rowTime) {
+
+            $(this).children('.description').removeClass('present');
+            $(this).children('.description').removeClass('past');
+            $(this).children('.description').addClass('future');
+        }   
+        else if (currentHour === rowTime) {
+            $(this).children('.description').removeClass('past');
+            $(this).children('.description').removeClass('future');
+            $(this).children('.description').addClass('present');
+            
+        } else {
+            $(this).children('.description').removeClass('present');
+            $(this).children('.description').removeClass('past');
+            $(this).children('.description').addClass('past');
+        }
     });
-    
-    if (currentHour.isAfter(time)) {
-        $('.description').addClass('past');
-    } else if (currentHour.isBefore(time)) {
-        $('.description').addClass('future');
-    } else {
-        $('.description').addClass('present');
-    }
 }
 
-const buttonHandler = function(event) {
+// Add to localStorage when button clicked
+const buttonHandler = function() {
     // Time and description of clicked row
-    const time = $(this).parent().siblings('.hour').find('p').text();
-    const description = $(this).parent().siblings('.description').find('p').text();
+    const newTime = $(this).parent().parent().attr("data-time");
+    const newDescription = $(this).parent().siblings('.description').find('p').text();
 
-    const taskObject = {
-        time: time,
-        description: description
-    };
+    console.log(newTime);
+    console.log(newDescription);
 
-    createTask(taskObject);
-}
+    $(tasks).each(function(index) {
+        if (tasks[index].time == newTime) {
+            tasks[index].description = newDescription;
+        }
+    });    
 
-const createTask = function(taskObject) {
-    tasks.push(taskObject);
-    saveTasks();
-}
-
-var saveTasks = function() {
+    // Save to localstorage
     localStorage.setItem("tasks", JSON.stringify(tasks));
-    console.log(tasks);
-};
+}
 
-// Check the hours
+// Check the hours on a set interval
 setInterval(function() {
-    $('.container .hour').each(function(index, element) {
-        auditRow(element);
-        console.log(element);
-    });
+    auditRow();
 }, (1000*60)*15);
 
 // Check the rows on document load
 $(document).ready(function(){
-    $('.container .hour').each(function(index, element) {
-        auditRow(element);
-        console.log(element);
-    });
+
+    const currentDay = moment().format("MMM Do YYYY");   
+    // Populate with the current day
+    $('#currentDay').text(currentDay);
+
+    auditRow();
+
+    // If tasks is null, create the starter schedule
+    if(localStorage.getItem("tasks") === null) {
+        createSchedule();
+    }
+
+    // Load from localStorage
+    loadTasks();
 });
 
 $('.saveBtn').click(buttonHandler);
